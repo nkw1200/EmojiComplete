@@ -125,5 +125,5 @@ def main(dataset_name: str, debug: bool):
 
 if __name__ == "__main__":
     dataset = sys.argv[1]
-    debug = bool(sys.argv[2])
+    debug = sys.argv[2] == 'true'
     main(dataset, debug)
