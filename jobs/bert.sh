@@ -12,4 +12,7 @@
 # Starts in the jobs folder. Need to bring it back
 cd ..
 
+# Load correct python version
+module load python/3.9.7
+
 python src/bert.py train False
