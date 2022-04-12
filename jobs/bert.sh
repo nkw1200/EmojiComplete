@@ -9,4 +9,7 @@
 #SBATCH --mail-user=eurb@umich.edu,agedeon@umich.edu,anrao@umich.edu,wongna@umich.edu,bsteinig@umich.edu
 #SBATCH --job-name=emojiComplete
 
+# Starts in the jobs folder. Need to bring it back
+cd ..
+
 python src/bert.py train False
