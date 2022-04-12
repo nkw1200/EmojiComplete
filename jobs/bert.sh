@@ -2,7 +2,7 @@
 # JOB HEADERS HERE
 #SBATCH --partition=gpu
 #SBATCH --gpus=1
-#SBATCH --time=36:00:00
+#SBATCH --time=72:00:00
 #SBATCH --cpus-per-gpu=32
 #SBATCH --mem-per-gpu=32GB
 #SBATCH --mail-type=BEGIN,END,FAIL
