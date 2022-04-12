@@ -110,7 +110,7 @@ def main(dataset_name: str, debug: bool):
     print('Evaluating... \n')
     model.eval()
 
-    test_dict = {k: test[k] for k in DATASET_COLUMNS}
+    test_dict = {k: test[k].to(DEVICE) for k in DATASET_COLUMNS}
     out = model(**test_dict)
     print(classification_report(test['labels'], torch.max(out['logits'], axis=1)[1]))
 
