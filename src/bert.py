@@ -47,6 +47,8 @@ def extractData(zip_path: str, debug: bool):
     df = pd.concat(li, axis=0, ignore_index=True)
     if debug:
         df = df[:100]
+    else:
+        df = df[:int(len(df)/2)]
 
     """# Make Datasets"""
 
