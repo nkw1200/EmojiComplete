@@ -109,8 +109,7 @@ def main(dataset_name: str, debug: bool):
         per_device_eval_batch_size=batch_size,
         num_train_epochs=3,
         weight_decay=0.01,
-        fp16=True,
-        compute_metrics=compute_metrics
+        fp16=True
         # load_best_model_at_end=True,
     )
 
@@ -120,6 +119,7 @@ def main(dataset_name: str, debug: bool):
         args,
         train_dataset=train,
         eval_dataset=test,
+        compute_metrics=compute_metrics
     )
 
     trainer.train()
