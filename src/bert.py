@@ -16,11 +16,11 @@ import sys
 import os
 from tqdm import tqdm
 from sklearn.metrics import classification_report
-from transformers import DistilBertTokenizer, DistilBertForSequenceClassification
+from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, Trainer, TrainingArguments
 from datasets import Dataset
 import glob
 
-from src.plot import plot_loss
+# from src.plot import plot_loss
 
 DATA_COLUMN = 'Tweet'
 LABEL_COLUMN = 'Emoji'
@@ -85,43 +85,41 @@ def main(dataset_name: str, debug: bool):
 
     Further hyperparameter tuning is needed here
     """
-
-    optimizer = torch.optim.Adam(params = model.parameters(), lr=3e-5, eps=1e-08)
-    criterion = torch.nn.CrossEntropyLoss()
     batch_size = 1 if debug else 32
-    dataloader = torch.utils.data.DataLoader(train, batch_size=batch_size)
 
-    print('Training... \n')
-    loss_history = np.empty(len(dataloader))
-    # From HuggingFace quickstart
-    for epoch in range(EPOCHS):
-        print(f'\n\nEpoch {epoch+1}/3:')
-        for i, batch in enumerate(tqdm(dataloader)):
-            batch = {k: v.to(DEVICE) for k, v in batch.items()}
-            outputs = model(**batch)
-            loss = outputs[0]
-            loss_history[i] = loss
-            loss.backward()
-            optimizer.step()
-            optimizer.zero_grad()
-            if i % 10 == 0:
-                print(f"\nloss: {loss}")
+    print('\nSetting up training arguments')
+    args = TrainingArguments(
+        f"trained-{dataset_name}",
+        evaluation_strategy = "steps",
+        save_strategy = "steps",
+        eval_steps = 1000,
+        learning_rate=2e-5,
+        per_device_train_batch_size=batch_size,
+        per_device_eval_batch_size=batch_size,
+        num_train_epochs=3,
+        weight_decay=0.01,
+        fp16=True
+        # load_best_model_at_end=True,
+    )
 
-    print('Evaluating... \n')
-    model.eval()
+    print('\nSetting up trainer')
+    trainer = Trainer(
+        model,
+        args,
+        train_dataset=train,
+        eval_dataset=test,
+    )
 
-    test_dict = {k: test[k].to(DEVICE) for k in DATASET_COLUMNS}
-    out = model(**test_dict)
-    print(classification_report(test['labels'], torch.max(out['logits'], axis=1)[1]))
+    trainer.train()
 
     print('Saving model... \n')
-    model.save_pretrained(f'model/{dataset_name}-trained-bert')
+    trainer.save_model(f'model/{dataset_name}-trained-bert')
 
-    print('Creating figure... \n')
+    # print('Creating figure... \n')
     
-    plot_loss('Bert Training', loss_history, EPOCHS)
+    # plot_loss('Bert Training', loss_history, EPOCHS)
     # Save loss history in case we want to regenerate graph
-    np.save(f'data/bert_{dataset}_loss.npz', loss_history)
+    # np.save(f'data/bert_{dataset}_loss.npz', loss_history)
 
 if __name__ == "__main__":
     dataset = sys.argv[1]
