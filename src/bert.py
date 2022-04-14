@@ -19,6 +19,7 @@ from sklearn.metrics import classification_report
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, Trainer, TrainingArguments
 from datasets import Dataset
 import glob
+from datasets import load_metric
 
 # from src.plot import plot_loss
 
@@ -29,6 +30,14 @@ DATA_PATH = 'data'
 DATASET_COLUMNS = ['input_ids', 'attention_mask', 'labels']
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 EPOCHS = 3
+
+
+metric = load_metric('accuracy')
+
+def compute_metrics(eval_pred):
+    predictions, labels = eval_pred
+    predictions = np.argmax(predictions, axis=1)
+    return metric.compute(predictions=predictions, references=labels)
 
 def extractData(zip_path: str, debug: bool):
     """**Download Data**"""
@@ -100,7 +109,8 @@ def main(dataset_name: str, debug: bool):
         per_device_eval_batch_size=batch_size,
         num_train_epochs=3,
         weight_decay=0.01,
-        fp16=True
+        fp16=True,
+        compute_metrics=compute_metrics
         # load_best_model_at_end=True,
     )
 
