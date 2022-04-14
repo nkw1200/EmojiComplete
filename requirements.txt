@@ -6,3 +6,4 @@ sklearn
 transformers
 datasets
 matplotlib
+text_unidecode

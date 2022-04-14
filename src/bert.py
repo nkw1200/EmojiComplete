@@ -20,7 +20,7 @@ from transformers import DistilBertTokenizer, DistilBertForSequenceClassificatio
 from datasets import Dataset
 import glob
 
-from src.plot import plot_loss
+from plot import plot_loss
 
 DATA_COLUMN = 'Tweet'
 LABEL_COLUMN = 'Emoji'
@@ -86,9 +86,9 @@ def main(dataset_name: str, debug: bool):
     Further hyperparameter tuning is needed here
     """
 
-    optimizer = torch.optim.Adam(params = model.parameters(), lr=3e-5, eps=1e-08)
+    optimizer = torch.optim.Adam(params = model.parameters(), lr=1e-4, eps=1e-08)
     criterion = torch.nn.CrossEntropyLoss()
-    batch_size = 1 if debug else 32
+    batch_size = 1 if debug else 16
     dataloader = torch.utils.data.DataLoader(train, batch_size=batch_size)
 
     print('Training... \n')
@@ -96,6 +96,7 @@ def main(dataset_name: str, debug: bool):
     # From HuggingFace quickstart
     for epoch in range(EPOCHS):
         print(f'\n\nEpoch {epoch+1}/3:')
+        loss = 10
         for i, batch in enumerate(tqdm(dataloader)):
             batch = {k: v.to(DEVICE) for k, v in batch.items()}
             outputs = model(**batch)
@@ -104,7 +105,7 @@ def main(dataset_name: str, debug: bool):
             loss.backward()
             optimizer.step()
             optimizer.zero_grad()
-            if i % 10 == 0:
+            if i % 100 == 0:
                 print(f"\nloss: {loss}")
 
     print('Evaluating... \n')
@@ -112,7 +113,7 @@ def main(dataset_name: str, debug: bool):
 
     test_dict = {k: test[k].to(DEVICE) for k in DATASET_COLUMNS}
     out = model(**test_dict)
-    print(classification_report(test['labels'], torch.max(out['logits'], axis=1)[1]))
+    print(classification_report(test['labels'].cpu(), torch.max(out['logits'], axis=1)[1].cpu()))
 
     print('Saving model... \n')
     model.save_pretrained(f'model/{dataset_name}-trained-bert')
@@ -121,7 +122,7 @@ def main(dataset_name: str, debug: bool):
     
     plot_loss('Bert Training', loss_history, EPOCHS)
     # Save loss history in case we want to regenerate graph
-    np.save(f'data/bert_{dataset}_loss.npz', loss_history)
+    np.save(f'data/bert_{dataset_name}_loss.npz', loss_history)
 
 if __name__ == "__main__":
     dataset = sys.argv[1]
