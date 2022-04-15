@@ -16,7 +16,7 @@ import sys
 import os
 from tqdm import tqdm
 from sklearn.metrics import classification_report
-from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, Trainer, TrainingArguments
+from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, Trainer, TrainingArguments, EarlyStoppingCallback
 from datasets import Dataset
 import glob
 from datasets import load_metric
@@ -32,12 +32,18 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 EPOCHS = 3
 
 
-metric = load_metric('accuracy')
+metrics = ["accuracy", "f1"] #List of metrics to return
+metric={}
+for met in metrics:
+    metric[met] = load_metric(met)
 
 def compute_metrics(eval_pred):
-    predictions, labels = eval_pred
-    predictions = np.argmax(predictions, axis=1)
-    return metric.compute(predictions=predictions, references=labels)
+    logits, labels = eval_pred
+    predictions = np.argmax(logits, axis=-1)
+    metric_res={}
+    for met in metrics:
+       metric_res[met]=metric[met].compute(predictions=predictions, references=labels)[met]
+    return metric_res
 
 def extractData(zip_path: str, debug: bool):
     """**Download Data**"""
@@ -104,13 +110,15 @@ def main(dataset_name: str, debug: bool):
         evaluation_strategy = "steps",
         save_strategy = "steps",
         eval_steps = 1000,
+        save_steps = 2000,
         learning_rate=2e-5,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         num_train_epochs=3,
         weight_decay=0.01,
-        fp16=True
-        # load_best_model_at_end=True,
+        fp16=torch.cuda.is_available(),
+        load_best_model_at_end=True,
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=4)]
     )
 
     print('\nSetting up trainer')
