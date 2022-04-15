@@ -32,17 +32,17 @@ DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 EPOCHS = 3
 
 
-metrics = ["accuracy", "f1"] #List of metrics to return
+metrics = [("accuracy", {}), ("f1", {"average": "weighted"})] #List of metrics to return
 metric={}
-for met in metrics:
-    metric[met] = load_metric(met)
+for met_name, _ in metrics:
+    metric[met_name] = load_metric(met_name)
 
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
     metric_res={}
-    for met in metrics:
-       metric_res[met]=metric[met].compute(predictions=predictions, references=labels)[met]
+    for met_name, met_args in metrics:
+       metric_res[met_name]=metric[met_name].compute(predictions=predictions, references=labels, **met_args)[met_name]
     return metric_res
 
 def extractData(zip_path: str, debug: bool):
@@ -109,16 +109,15 @@ def main(dataset_name: str, debug: bool):
         f"trained-{dataset_name}",
         evaluation_strategy = "steps",
         save_strategy = "steps",
-        eval_steps = 1000,
-        save_steps = 2000,
+        eval_steps = 10 if debug else 1000,
+        save_steps = 20 if debug else 2000,
         learning_rate=2e-5,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
         num_train_epochs=3,
         weight_decay=0.01,
         fp16=torch.cuda.is_available(),
-        load_best_model_at_end=True,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=4)]
+        load_best_model_at_end=True
     )
 
     print('\nSetting up trainer')
@@ -127,7 +126,8 @@ def main(dataset_name: str, debug: bool):
         args,
         train_dataset=train,
         eval_dataset=test,
-        compute_metrics=compute_metrics
+        compute_metrics=compute_metrics,
+        callbacks=[EarlyStoppingCallback(early_stopping_patience=4)]
     )
 
     trainer.train()
