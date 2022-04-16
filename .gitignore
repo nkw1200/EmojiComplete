@@ -2,3 +2,6 @@
 __pycache__
 train.zip
 data/*/
+env/
+torchMoji/
+model/

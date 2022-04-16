@@ -94,7 +94,7 @@ def main(dataset_name: str, debug: bool):
                                                                 num_labels=len(mapping_emoji))
     model = model.to(DEVICE)
 
-    train_testvalid = dataset.train_test_split(test_size=0.1)
+    train_testvalid = dataset.train_test_split(test_size=0.01)
     train = train_testvalid["train"]
     test = train_testvalid["test"]
 
@@ -117,7 +117,8 @@ def main(dataset_name: str, debug: bool):
         num_train_epochs=3,
         weight_decay=0.01,
         fp16=torch.cuda.is_available(),
-        load_best_model_at_end=True
+        load_best_model_at_end=True,
+        save_total_limit=5
     )
 
     print('\nSetting up trainer')
