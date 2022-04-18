@@ -53,7 +53,7 @@ def compute_metrics(eval_pred):
 
     return metric_res
 
-def extractData(zip_path: str, debug: bool):
+def extractData(zip_path: str, debug: bool,  emoji_map: np.ndarray):
     """**Download Data**"""
     zipFile = os.path.join(DATA_PATH, zip_path)
     with ZipFile(zipFile, 'r') as zip:
@@ -75,11 +75,8 @@ def extractData(zip_path: str, debug: bool):
 
     """# Make Datasets"""
 
-    mappingPath = os.path.join(DATA_PATH, 'mapping.npy')
-    mapping_emoji = np.load(mappingPath, allow_pickle=True)
-
-    df[LABEL_COLUMN].replace(mapping_emoji,
-                            [i for i in range(len(mapping_emoji))],
+    df[LABEL_COLUMN].replace(emoji_map,
+                            [i for i in range(len(emoji_map))],
                             inplace=True)
 
     tokenizer = DistilBertTokenizer.from_pretrained(MODEL_NAME)
@@ -92,14 +89,14 @@ def extractData(zip_path: str, debug: bool):
     dataset = dataset.rename_column(LABEL_COLUMN, "labels")
     dataset.set_format(type='torch', columns=DATASET_COLUMNS)
 
-    return (dataset, mapping_emoji)
+    return dataset
 
-def main(dataset_name: str, debug: bool):
+def main(dataset_name: str, debug: bool, emoji_map: np.ndarray):
     print('Extracting data... \n')
-    dataset, mapping_emoji = extractData(f"{dataset_name}.zip", debug)
+    dataset = extractData(f"{dataset_name}.zip", debug, emoji_map)
 
     model = DistilBertForSequenceClassification.from_pretrained(MODEL_NAME, 
-                                                                num_labels=len(mapping_emoji))
+                                                                num_labels=len(emoji_map))
     model = model.to(DEVICE)
 
     train_testvalid = dataset.train_test_split(test_size=0.01)
@@ -153,4 +150,7 @@ def main(dataset_name: str, debug: bool):
 if __name__ == "__main__":
     dataset = sys.argv[1]
     debug = sys.argv[2] == 'true'
-    main(dataset, debug)
+    emoji_map_path = os.path.join(DATA_PATH, sys.argv[3])
+    emoji_map = np.load(emoji_map_path, allow_pickle=True)
+
+    main(dataset, debug, emoji_map)
