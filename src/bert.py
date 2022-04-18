@@ -74,10 +74,12 @@ def extractData(zip_path: str, debug: bool,  emoji_map: np.ndarray):
         df = df[:int(len(df)/2)]
 
     """# Make Datasets"""
-
-    df[LABEL_COLUMN].replace(emoji_map,
-                            [i for i in range(len(emoji_map))],
-                            inplace=True)
+    if type(dict()) == type(emoji_map):
+        df[LABEL_COLUMN].replace(emoji_map, inplace = True)
+    else:
+        df[LABEL_COLUMN].replace(emoji_map,
+                                 [i for i in range(len(emoji_map))],
+                                 inplace=True)
 
     tokenizer = DistilBertTokenizer.from_pretrained(MODEL_NAME)
 
