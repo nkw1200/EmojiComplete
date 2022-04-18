@@ -31,6 +31,8 @@ DATASET_COLUMNS = ['input_ids', 'attention_mask', 'labels']
 DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
 EPOCHS = 3
 
+# def top5_accuracy(predictions, labels) -> float:
+
 
 metrics = [("accuracy", {}), ("f1", {"average": "weighted"})] #List of metrics to return
 metric={}
@@ -43,6 +45,12 @@ def compute_metrics(eval_pred):
     metric_res={}
     for met_name, met_args in metrics:
        metric_res[met_name]=metric[met_name].compute(predictions=predictions, references=labels, **met_args)[met_name]
+    
+    M = 5
+    topMpredictions = (-logits).argsort()[...,:M]
+    inTopM = (topMpredictions == labels[..., np.newaxis]).any(axis=-1)
+    metric_res[f'top{M}_accuracy'] = inTopM.sum()/len(inTopM)
+
     return metric_res
 
 def extractData(zip_path: str, debug: bool):
