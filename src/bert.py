@@ -20,6 +20,7 @@ from transformers import DistilBertTokenizer, DistilBertForSequenceClassificatio
 from datasets import Dataset
 import glob
 from datasets import load_metric
+import datetime as dt
 
 # from src.plot import plot_loss
 
@@ -106,11 +107,12 @@ def main(dataset_name: str, debug: bool, emoji_map: np.ndarray):
 
     Further hyperparameter tuning is needed here
     """
-    batch_size = 1 if debug else 32
+    batch_size = 1 if debug else 16
+    tod_date = str(dt.datetime.today())
 
     print('\nSetting up training arguments')
     args = TrainingArguments(
-        f"trained-{dataset_name}",
+        f"trained-{dataset_name}-{tod_date}",
         evaluation_strategy = "steps",
         save_strategy = "steps",
         eval_steps = 10 if debug else 1000,
@@ -132,13 +134,13 @@ def main(dataset_name: str, debug: bool, emoji_map: np.ndarray):
         train_dataset=train,
         eval_dataset=test,
         compute_metrics=compute_metrics,
-        callbacks=[EarlyStoppingCallback(early_stopping_patience=4)]
+        # callbacks=[EarlyStoppingCallback(early_stopping_patience=4)]  # TODO
     )
 
     trainer.train()
 
     print('Saving model... \n')
-    trainer.save_model(f'model/{dataset_name}-trained-bert')
+    trainer.save_model(f'model/{dataset_name}-trained-bert-{tod_date}')
 
     # print('Creating figure... \n')
     
