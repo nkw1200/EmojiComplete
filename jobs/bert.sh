@@ -18,4 +18,4 @@ module load python/3.9.7
 # Ensure that python's cwd is same as script
 export PYTHONPATH=.
 
-python src/bert.py train False
+python src/bert.py train false mapping.npy
