@@ -74,12 +74,7 @@ def extractData(zip_path: str, debug: bool,  emoji_map: np.ndarray):
         df = df[:int(len(df)/2)]
 
     """# Make Datasets"""
-    if type(dict()) == type(emoji_map):
-        df[LABEL_COLUMN].replace(emoji_map, inplace = True)
-    else:
-        df[LABEL_COLUMN].replace(emoji_map,
-                                 [i for i in range(len(emoji_map))],
-                                 inplace=True)
+    df[LABEL_COLUMN].replace(emoji_map.item(), inplace = True)
 
     tokenizer = DistilBertTokenizer.from_pretrained(MODEL_NAME)
 
@@ -96,9 +91,11 @@ def extractData(zip_path: str, debug: bool,  emoji_map: np.ndarray):
 def main(dataset_name: str, debug: bool, emoji_map: np.ndarray):
     print('Extracting data... \n')
     dataset = extractData(f"{dataset_name}.zip", debug, emoji_map)
+    num_classes = max(emoji_map.item().values())+1
+    print(f"Number of classes used {num_classes}.")
 
     model = DistilBertForSequenceClassification.from_pretrained(MODEL_NAME, 
-                                                                num_labels=len(emoji_map))
+                                                                num_labels=num_classes)
     model = model.to(DEVICE)
 
     train_testvalid = dataset.train_test_split(test_size=0.01)
