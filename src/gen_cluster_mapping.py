@@ -4,7 +4,8 @@ mapping = np.load('data/mapping.npy', allow_pickle=True)
 new_mapping = {}
 
 count = 0
-for ind, i in enumerate(mapping):
+print("Original Mapping:", mapping.item())
+for i, ind in mapping.item().items():
 	if ind in [0, 2, 40]:
 	    new_mapping[i] = 0
 
@@ -29,7 +30,11 @@ for ind, i in enumerate(mapping):
 	if ind in [24, 35]:
 	    new_mapping[i] = 7
 
-	if ind in [3, 5, 7, 11, 12, 14, 15, 19, 21, 22,23, 25, 26, 27, 28, 29, 31, 33, 38, 33 , 40, 41, 45, 46, 47]:
-	    new_mapping[i] = ind+8
+	if ind in [39, 42]:
+	    new_mapping[i] = 8
+
+	if ind in [3, 5, 7, 11, 12, 14, 15, 19, 21, 22,23, 25, 26, 27, 28, 29, 31, 33, 38, 33 , 40, 41, 45, 43, 46, 47]:
+	    new_mapping[i] = count+9
 	    count += 1
+print("New Mapping:", new_mapping)
 np.save("clustered_mapping.npy", new_mapping, allow_pickle=True)
