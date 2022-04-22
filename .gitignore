@@ -6,3 +6,5 @@ env/
 torchMoji/
 model/
 debug_*.png
+trained-train*/
+trained-dev*/
