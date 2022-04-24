@@ -16,11 +16,13 @@ import sys
 import os
 from tqdm import tqdm
 from sklearn.metrics import classification_report
+from sklearn.utils.class_weight import compute_class_weight
 from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, Trainer, TrainingArguments, EarlyStoppingCallback
 from datasets import Dataset
 import glob
 from datasets import load_metric
 import datetime as dt
+from torch import nn
 
 # from src.plot import plot_loss
 
@@ -75,7 +77,7 @@ def extractData(zip_path: str, debug: bool,  emoji_map: np.ndarray):
 
     df = pd.concat(li, axis=0, ignore_index=True)
     if debug:
-        df = df[:100]
+        df = df[:1000]
     else:
         df = df[:int(len(df)/2)]
 
@@ -94,11 +96,25 @@ def extractData(zip_path: str, debug: bool,  emoji_map: np.ndarray):
 
     return dataset
 
+# Mostly lifted from documentation
+class TrainerWeighted(Trainer):
+    def __init__(self,*args, **kwargs):
+        self.weights = kwargs.pop('weights',None)
+        super().__init__(*args, **kwargs)
+    def compute_loss(self, model, inputs, return_outputs=False):
+        labels = inputs.get("labels")
+        outputs = model(**inputs)
+        logits = outputs.get("logits")
+        loss_fct = nn.CrossEntropyLoss(weight=self.weights)
+        loss = loss_fct(logits.view(-1, self.model.config.num_labels), labels.view(-1))
+        return (loss, outputs) if return_outputs else loss
+
 
 def main(dataset_name: str, debug: bool, emoji_map: np.ndarray):
     print('Extracting data... \n')
     dataset = extractData(f"{dataset_name}.zip", debug, emoji_map)
     num_classes = max(emoji_map.item().values())+1
+    class_weights = compute_class_weight(class_weight = 'balanced', classes = range(num_classes), y = dataset['labels'].numpy())
     print(f"Number of classes used {num_classes}.")
 
     model = DistilBertForSequenceClassification.from_pretrained(MODEL_NAME,
@@ -135,12 +151,13 @@ def main(dataset_name: str, debug: bool, emoji_map: np.ndarray):
     )
 
     print('\nSetting up trainer')
-    trainer = Trainer(
+    trainer = TrainerWeighted(
         model,
         args,
         train_dataset=train,
         eval_dataset=test,
         compute_metrics=compute_metrics,
+        weights = torch.Tensor(class_weights).to(DEVICE),
         # callbacks=[EarlyStoppingCallback(early_stopping_patience=4)]  # TODO
     )
 
