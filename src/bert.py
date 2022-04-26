@@ -16,7 +16,7 @@ import sys
 import os
 from tqdm import tqdm
 from sklearn.metrics import classification_report
-from transformers import DistilBertTokenizer, DistilBertForSequenceClassification, Trainer, TrainingArguments, EarlyStoppingCallback
+from transformers import DistilBertTokenizer, DistilBertConfig, DistilBertForSequenceClassification, Trainer, TrainingArguments, EarlyStoppingCallback
 from datasets import Dataset
 import glob
 from datasets import load_metric
@@ -35,28 +35,24 @@ EPOCHS = 3
 # def top5_accuracy(predictions, labels) -> float:
 
 
-# List of metrics to return
-metrics = [("accuracy", {}), ("f1", {"average": "weighted"})]
-metric = {}
+metrics = [("accuracy", {}), ("f1", {"average": "weighted"})] #List of metrics to return
+metric={}
 for met_name, _ in metrics:
     metric[met_name] = load_metric(met_name)
-
 
 def compute_metrics(eval_pred):
     logits, labels = eval_pred
     predictions = np.argmax(logits, axis=-1)
-    metric_res = {}
+    metric_res={}
     for met_name, met_args in metrics:
-        metric_res[met_name] = metric[met_name].compute(
-            predictions=predictions, references=labels, **met_args)[met_name]
-
+       metric_res[met_name]=metric[met_name].compute(predictions=predictions, references=labels, **met_args)[met_name]
+    
     M = 5
-    topMpredictions = (-logits).argsort()[..., :M]
+    topMpredictions = (-logits).argsort()[...,:M]
     inTopM = (topMpredictions == labels[..., np.newaxis]).any(axis=-1)
     metric_res[f'top{M}_accuracy'] = inTopM.sum()/len(inTopM)
 
     return metric_res
-
 
 def extractData(zip_path: str, debug: bool,  emoji_map: np.ndarray):
     """**Download Data**"""
@@ -69,8 +65,7 @@ def extractData(zip_path: str, debug: bool,  emoji_map: np.ndarray):
     li = []
 
     for filename in all_files:
-        temp = pd.read_csv(filename, index_col=None,
-                           header=None, names=["Tweet", "Emoji"])
+        temp = pd.read_csv(filename, index_col=None, header=None, names=["Tweet","Emoji"])
         li.append(temp)
 
     df = pd.concat(li, axis=0, ignore_index=True)
@@ -80,20 +75,19 @@ def extractData(zip_path: str, debug: bool,  emoji_map: np.ndarray):
         df = df[:int(len(df)/2)]
 
     """# Make Datasets"""
-    df[LABEL_COLUMN].replace(emoji_map.item(), inplace=True)
+    df[LABEL_COLUMN].replace(emoji_map.item(), inplace = True)
 
     tokenizer = DistilBertTokenizer.from_pretrained(MODEL_NAME)
 
     dataset = Dataset.from_pandas(df)
-    dataset = dataset.map(lambda e: tokenizer(e[DATA_COLUMN],
-                                              truncation=True,
-                                              padding='max_length'), batched=True)
+    dataset = dataset.map(lambda e: tokenizer(e[DATA_COLUMN], 
+                                            truncation=True, 
+                                            padding='max_length'), batched=True)
 
     dataset = dataset.rename_column(LABEL_COLUMN, "labels")
     dataset.set_format(type='torch', columns=DATASET_COLUMNS)
 
     return dataset
-
 
 def main(dataset_name: str, debug: bool, emoji_map: np.ndarray):
     print('Extracting data... \n')
@@ -101,7 +95,8 @@ def main(dataset_name: str, debug: bool, emoji_map: np.ndarray):
     num_classes = max(emoji_map.item().values())+1
     print(f"Number of classes used {num_classes}.")
 
-    model = DistilBertForSequenceClassification.from_pretrained(MODEL_NAME,
+    conf = DistilBertConfig(dim = 768//2)
+    model = DistilBertForSequenceClassification(config=conf).from_pretrained(MODEL_NAME, 
                                                                 num_labels=num_classes)
     model = model.to(DEVICE)
 
@@ -113,17 +108,16 @@ def main(dataset_name: str, debug: bool, emoji_map: np.ndarray):
 
     Further hyperparameter tuning is needed here
     """
-    batch_size = 1 if debug else 32
-    tod_date = "_".join(str(dt.datetime.today()).split(' '))
+    batch_size = 1 if debug else 16
+    tod_date = str(dt.datetime.today())
 
     print('\nSetting up training arguments')
     args = TrainingArguments(
         f"trained-{dataset_name}-{tod_date}",
-        evaluation_strategy="steps",
-        save_strategy="steps",
-        eval_steps=10 if debug else 2000,  # originally 1k
-        save_steps=20 if debug else 2000,
-        # we do 2e-5, recommended batch sizes: 8, 16, 32, 64, 128, lr: 3e-4, 1e-4, 5e-5, 3e-5
+        evaluation_strategy = "steps",
+        save_strategy = "steps",
+        eval_steps = 10 if debug else 1000,
+        save_steps = 20 if debug else 2000,
         learning_rate=2e-5,
         per_device_train_batch_size=batch_size,
         per_device_eval_batch_size=batch_size,
@@ -150,11 +144,10 @@ def main(dataset_name: str, debug: bool, emoji_map: np.ndarray):
     trainer.save_model(f'model/{dataset_name}-trained-bert-{tod_date}')
 
     # print('Creating figure... \n')
-
+    
     # plot_loss('Bert Training', loss_history, EPOCHS)
     # Save loss history in case we want to regenerate graph
     # np.save(f'data/bert_{dataset}_loss.npz', loss_history)
-
 
 if __name__ == "__main__":
     dataset = sys.argv[1]
