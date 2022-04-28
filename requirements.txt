@@ -5,4 +5,6 @@ tqdm
 sklearn
 transformers
 datasets
-matplotlib
+# Need specific commit of matplotlib with a fix for emojis
+package-name -e git+https://github.com/meeseeksmachine/matplotlib.git@08cb870e13dcb77bc697ac2811d0d7a16b2d0313
+emoji
